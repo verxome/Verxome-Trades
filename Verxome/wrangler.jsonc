@@ -1,9 +1,0 @@
-{
-  "name": "verxome-trades",
-  "compatibility_date": "2026-09-10",
-  "main": "worker.js",
-  "assets": {
-    "directory": ".",
-    "binding": "ASSETS"
-  }
-}
