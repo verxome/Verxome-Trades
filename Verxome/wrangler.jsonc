@@ -1,0 +1,16 @@
+{
+  "name": "verxome-trades",
+  "compatibility_date": "2026-09-10",
+  "main": "worker.js",
+  "assets": {
+    "directory": ".",
+    "binding": "ASSETS"
+  },
+  "secrets_store_secrets": [
+    {
+      "binding": "PAYSTACK_SECRET_KEY",
+      "store_id": "17f2e93e13a644a2a47f3102f3f37333",
+      "secret_name": "paystack-secret-key"
+    }
+  ]
+}
