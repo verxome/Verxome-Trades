@@ -1,5 +1,5 @@
 {
-  "name": "verxome-trades",
+  "name": "verxometrades",
   "compatibility_date": "2026-09-10",
   "main": "worker.js",
   "assets": {
