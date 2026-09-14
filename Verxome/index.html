@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Verxome Trades</title>
+<meta name="description" content="Focused Signals. Smart Analysis. Disciplined Execution." />
+
+<!-- Open Graph tags — control the preview shown when this link is shared on WhatsApp, Instagram, Facebook, Telegram, etc. -->
+<meta property="og:title" content="Verxome Trades — Join the War Room" />
+<meta property="og:description" content="Focused Signals. Smart Analysis. Disciplined Execution." />
+<meta property="og:image" content="https://verxometrades.online/og-image.png" />
+<meta property="og:url" content="https://verxometrades.online/" />
+<meta property="og:type" content="website" />
+
+<!-- Twitter Card tags — same idea, for X/Twitter previews -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Verxome Trades — Join the War Room" />
+<meta name="twitter:description" content="Focused Signals. Smart Analysis. Disciplined Execution." />
+<meta name="twitter:image" content="https://verxometrades.online/og-image.png" />
+
+<link rel="icon" type="image/png" href="Verxome favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- EmailJS: sends the "new application" notification straight from the
+     browser once VerxomeAPI's NOTIFY_EMAIL is enabled in verxome-api.js —
+     see the setup comment above NOTIFY_EMAIL in that file. Safe to leave
+     loaded even while disabled; it just sits idle. -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<!-- Paystack Inline (Popup) — opens the real payment popup on submit. See
+     CONFIG.PAYSTACK in verxome-api.js for the public key, and
+     openPaystackCheckout() near the bottom of this file for how it's used. -->
+<script src="https://js.paystack.co/v2/inline.js"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink: '#0B0A10',
+          muted: '#6B6875',
+          line: '#E7E4EE',
+          surface: '#FAFAFB',
+          deep: { DEFAULT:'#5E1A9D', 900:'#2E0F57', 800:'#5E1A9D', 700:'#6B2BB8' },
+          electric: { DEFAULT:'#6B2BB8', 400:'#8B5CC7', 500:'#6B2BB8', 600:'#5E1A9D' },
+        },
+        fontFamily: { sans: ['Inter','system-ui','sans-serif'] },
+      }
+    }
+  }
+</script>
+<script src="verxome-api-live.js"></script>
+<style>
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+  /* A baseline transition on every interactive element so hover/focus states
+     ease in instead of snapping instantly — this is most of what made the
+     site feel stiff. More specific rules below layer smoother easing on top. */
+  a, button, input, .accordion-panel, .faq-caret {
+    transition: color .2s ease, background-color .2s ease, border-color .2s ease,
+                transform .2s cubic-bezier(.22,1,.36,1), box-shadow .2s ease, opacity .2s ease;
+  }
+  ::selection { background:#5E1A9D; color:#fff; }
+  .bg-dot-grid { background-image: radial-gradient(rgba(107,43,184,0.16) 1px, transparent 1px); background-size: 22px 22px; }
+  .fade-up { opacity:0; transform: translateY(20px); transition: opacity .7s cubic-bezier(.22,1,.36,1), transform .7s cubic-bezier(.22,1,.36,1); }
+  .fade-up.show { opacity:1; transform: translateY(0); }
+  @keyframes gentle-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+  .float-card { animation: gentle-float 6s ease-in-out infinite; }
+  .modal-backdrop { transition: opacity .25s ease; }
+  .modal-panel { transition: transform .3s ease, opacity .3s ease; }
+  .ticker-svg path { stroke-dasharray: 500; stroke-dashoffset: 500; animation: draw 2.4s ease forwards .6s; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  .accordion-panel { max-height:0; overflow:hidden; transition:max-height .3s ease; }
+  .accordion-panel.open { max-height: 400px; }
+  input:focus, button:focus-visible, a:focus-visible { outline:2px solid #6B2BB8; outline-offset:2px; border-radius:6px; }
+
+  /* ---- Pricing card design system (per spec: clean, premium, minimal,
+     military/rank-themed, mostly white with deep-purple accents) ---- */
+  .plan-card {
+    position: relative;
+    border: 1px solid #E7E4EE;
+    border-bottom: 7px solid #5E1A9D;
+    border-radius: 20px;
+    background: #fff;
+    padding: 42px 24px 30px;
+    text-align: center;
+    box-shadow: 0 8px 24px -16px rgba(94,26,157,0.18);
+    transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s ease, border-color .3s ease;
+    will-change: transform;
+  }
+  .plan-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 16px 34px -16px rgba(94,26,157,0.28);
+    border-top-color: #C9BEDD;
+    border-left-color: #C9BEDD;
+    border-right-color: #C9BEDD;
+  }
+  .plan-card.featured {
+    border-top-color: #6B2BB8;
+    border-left-color: #6B2BB8;
+    border-right-color: #6B2BB8;
+    border-bottom-color: #6B2BB8;
+    border-bottom-width: 8px;
+    box-shadow: 0 14px 38px -14px rgba(107,34,184,0.32);
+    transform: scale(1.03);
+  }
+  .plan-card.featured:hover {
+    transform: scale(1.03) translateY(-6px);
+    box-shadow: 0 20px 42px -14px rgba(107,34,184,0.38);
+  }
+  .plan-badge {
+    position: absolute;
+    top: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 56px;
+    height: 56px;
+    border-radius: 9999px;
+    background: linear-gradient(160deg, #6B2BB8 0%, #5E1A9D 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 16px -4px rgba(94,26,157,0.45);
+    border: 3px solid #fff;
+    transition: transform .3s ease;
+  }
+  .plan-card:hover .plan-badge { transform: translateX(-50%) scale(1.06); }
+  .plan-badge svg { width: 26px; height: 26px; fill: #fff; display: block; }
+  .plan-ribbon {
+    position: absolute;
+    top: -49px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #5E1A9D;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    padding: 5px 14px;
+    border-radius: 6px;
+    white-space: nowrap;
+    box-shadow: 0 4px 10px -2px rgba(94,26,157,0.5);
+    z-index: 10;
+  }
+  .plan-card.featured { padding-top: 44px; }
+  /* Below the lg breakpoint, plan cards stack in a single column. The featured
+     card's ribbon needs more clearance than the grid's row gap (32px) provides
+     on its own, so give it extra room only while stacked. */
+  @media (max-width: 1023px) {
+    .plan-card.featured { margin-top: 32px; }
+  }
+  .plan-name { color: #5E1A9D; letter-spacing: 0.05em; }
+  .plan-rank-row { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; }
+  .plan-rank-row .deco-line { width: 22px; height: 1px; background: #E7E4EE; }
+  .plan-stars { color: #5E1A9D; letter-spacing: 3px; font-size: 11px; }
+  .plan-credits-box { margin-top: 18px; border: 1px solid #E7E4EE; background: #FAFAFB; border-radius: 10px; padding: 16px 10px; }
+  .plan-price-num { color: #5E1A9D; }
+  .plan-includes-row { display: flex; align-items: center; gap: 8px; margin-top: 22px; }
+  .plan-includes-row .deco-line { flex: 1 1 auto; height: 1px; background: #E7E4EE; }
+  .plan-includes-label { color: #5E1A9D; letter-spacing: 0.06em; white-space: nowrap; }
+  .plan-check-circle { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 9999px; background: #5E1A9D; flex-shrink: 0; margin-top: 2px; transition: transform .15s ease; }
+  .plan-check-circle svg { width: 9px; height: 9px; fill: #fff; display: block; }
+  .plan-card li:hover .plan-check-circle { transform: scale(1.2); }
+  .join-plan-btn { transition: transform .25s cubic-bezier(.22,1,.36,1), background-color .2s ease, box-shadow .25s ease; }
+  .join-plan-btn:hover { box-shadow: 0 10px 22px -8px rgba(94,26,157,0.4); }
+
+  /* ---- Icon sizing (Phosphor icons throughout, no emoji) ---- */
+  .icon-btn { display:inline-flex; align-items:center; justify-content:center; }
+  .icon-btn svg { width: 16px; height: 16px; }
+  .social-link svg { width: 18px; height: 18px; }
+  .faq-caret svg { width: 16px; height: 16px; }
+  .plan-badge-in-modal svg { width: 18px; height: 18px; }
+  #success-icon svg { width: 28px; height: 28px; color: #059669; }
+
+  /* ---- Custom scrollbars to match the site's purple accent ---- */
+  .custom-scroll { scrollbar-width: thin; scrollbar-color: #6B2BB8 #F1EAFF; }
+  .custom-scroll::-webkit-scrollbar { width: 8px; }
+  .custom-scroll::-webkit-scrollbar-track { background: #F1EAFF; border-radius: 9999px; }
+  .custom-scroll::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #8B5CC7, #5E1A9D); border-radius: 9999px; }
+  .custom-scroll::-webkit-scrollbar-thumb:hover { background: #5E1A9D; }
+
+/* ============================================================
+   VERXOME 2.0 - FLAMBOYANT REDESIGN (auto-installed overrides)
+   ============================================================ */
+:root{
+  --vx-ink:#2E0F57; --vx-deep:#3D1470; --vx-purple:#5E1A9D;
+  --vx-bright:#6B2BB8; --vx-lilac:#8B5CC7; --vx-gold:#F0C868; --vx-gold-deep:#B8860B;
+}
+
+/* Plans section: purple wash + diagonal rank stripes (from the ad) */
+#plans{position:relative;overflow:hidden;background:linear-gradient(180deg,#FFFFFF 0%,#F6F2FC 45%,#EFE7FA 100%);}
+#plans::before,#plans::after{
+  content:"";position:absolute;width:380px;height:380px;pointer-events:none;z-index:0;opacity:.95;
+  background:repeating-linear-gradient(135deg,var(--vx-purple) 0 22px,#fff 22px 30px,var(--vx-lilac) 30px 42px,#fff 42px 50px);}
+#plans::before{top:0;left:0;clip-path:polygon(0 0,100% 0,0 100%);}
+#plans::after{bottom:0;right:0;clip-path:polygon(100% 0,100% 100%,0 100%);}
+#plans .mx-auto{position:relative;z-index:1;}
+#plans-grid{margin-top:7rem;}
+@media (max-width:640px){
+  #plans::before,#plans::after{width:200px;height:200px;}
+  #home::before{width:120px;height:120px;}
+}
+/* On phones the corner stripes have too little room to sit behind content
+   without cutting across text, so they're dropped below the sm breakpoint
+   rather than fought with more clipping/z-index tricks. */
+@media (max-width:640px){
+  #home::before,#plans::before,#plans::after{display:none;}
+}
+
+/* Hero: corner stripe + gradient headline + gradient CTAs */
+#home{position:relative;overflow:hidden;}
+#home::before{content:"";position:absolute;top:0;right:0;width:240px;height:240px;pointer-events:none;opacity:.9;
+  background:repeating-linear-gradient(135deg,var(--vx-purple) 0 18px,#fff 18px 26px,var(--vx-lilac) 26px 36px,#fff 36px 44px);
+  clip-path:polygon(100% 0,100% 100%,0 0);}
+#home h1{background:linear-gradient(115deg,var(--vx-ink) 15%,var(--vx-purple) 55%,var(--vx-lilac) 95%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:-.03em;}
+#home a.bg-deep,header nav a.bg-deep{
+  background-image:linear-gradient(135deg,var(--vx-bright),var(--vx-purple) 60%,var(--vx-deep));
+  background-color:transparent!important;box-shadow:0 12px 26px -10px rgba(94,26,157,.55);}
+#home a.bg-deep:hover,header nav a.bg-deep:hover{
+  background-image:linear-gradient(135deg,#7A3ED0,var(--vx-bright) 60%,var(--vx-purple));}
+
+/* Plan cards */
+.plan-card{
+  position:relative;z-index:1;overflow:visible;
+  border:1px solid #EAE4F5;border-bottom:8px solid var(--vx-purple);border-radius:24px;
+  background:#fff;padding:56px 26px 34px;text-align:center;
+  box-shadow:0 12px 30px -18px rgba(46,15,87,.28);
+  transition:transform .45s cubic-bezier(.22,1,.36,1),box-shadow .45s ease,border-color .3s ease,opacity .7s ease;}
+.plan-card > :where(*){position:relative;z-index:1;}
+.plan-card::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;border-radius:inherit;
+  background:linear-gradient(105deg,transparent 42%,rgba(139,92,199,.15) 50%,transparent 58%);
+  transform:translateX(-120%);transition:transform .9s ease;}
+.plan-card:hover::before{transform:translateX(120%);}
+.plan-card:hover{transform:translateY(-10px);border-bottom-color:var(--vx-bright);
+  box-shadow:0 34px 60px -22px rgba(94,26,157,.5);}
+.plan-card.featured{
+  padding:56px 26px 34px;border:2px solid transparent;border-bottom:8px solid var(--vx-purple);
+  background:linear-gradient(#fff,#fff) padding-box,
+             linear-gradient(150deg,var(--vx-lilac),var(--vx-purple) 45%,var(--vx-gold)) border-box;
+  transform:scale(1.045);z-index:2;
+  box-shadow:0 18px 44px -16px rgba(107,43,184,.45),0 0 44px -10px rgba(139,92,199,.35);}
+.plan-card.featured:hover{transform:scale(1.045) translateY(-10px);}
+
+/* Medallion badge */
+.plan-badge{
+  position:absolute;top:-32px;left:50%;transform:translateX(-50%);
+  width:72px;height:72px;border:4px solid #fff;border-radius:9999px;
+  background:radial-gradient(circle at 32% 26%,#A578E8 0%,var(--vx-bright) 42%,var(--vx-purple) 72%,var(--vx-ink) 100%);
+  box-shadow:0 0 0 3px #D7C6F2,0 14px 26px -8px rgba(46,15,87,.6),inset 0 -6px 12px rgba(0,0,0,.25);
+  transition:transform .35s cubic-bezier(.34,1.56,.64,1);}
+.plan-card:hover .plan-badge{transform:translateX(-50%) scale(1.09) rotate(-4deg);}
+.plan-badge svg{width:32px;height:32px;fill:#fff;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35));}
+.plan-card[data-plan="general"] .plan-badge{
+  box-shadow:0 0 0 3px var(--vx-gold),0 14px 26px -8px rgba(46,15,87,.6),inset 0 -6px 12px rgba(0,0,0,.25);}
+
+/* Ribbon */
+.plan-ribbon{
+  position:absolute;top:-88px;left:50%;transform:translateX(-50%);
+  padding:7px 20px 6px;border-radius:8px;z-index:20;white-space:nowrap;
+  background:linear-gradient(90deg,var(--vx-bright),var(--vx-purple));
+  font-size:10px;font-weight:800;letter-spacing:.22em;color:#fff;
+  box-shadow:0 10px 20px -6px rgba(94,26,157,.65);}
+.plan-ribbon::after{content:"";position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);
+  border-left:7px solid transparent;border-right:7px solid transparent;border-top:7px solid var(--vx-purple);}
+@media (max-width:1023px){
+  /* Stacked single-column layout: every card's medallion badge pokes up
+     ~32px above its own top edge, and the featured card's ribbon pokes up
+     ~88px — the default 32px grid gap isn't enough room for either, which
+     is what was reading as cards "overlapping". A uniform, generous row
+     gap gives every card (not just the featured one) clearance. */
+  #plans-grid{row-gap:6.5rem;}
+  .plan-card.featured{margin-top:0;}
+}
+
+/* Name / stars */
+.plan-name{font-weight:900;letter-spacing:.08em;text-transform:uppercase;
+  background:linear-gradient(135deg,var(--vx-bright),var(--vx-ink));
+  -webkit-background-clip:text;background-clip:text;color:transparent;}
+.plan-rank-row .deco-line,.plan-includes-row .deco-line{height:1px;background:linear-gradient(90deg,transparent,#C9B2EC,transparent)!important;}
+.plan-stars{font-size:13px;letter-spacing:5px;color:var(--vx-purple);text-shadow:0 1px 0 #EDE6F9;}
+.plan-card.featured .plan-stars{color:var(--vx-gold-deep);text-shadow:0 1px 0 #F7ECD0;}
+
+/* Price box */
+.plan-credits-box{
+  margin-top:20px;padding:16px 10px;border:1.5px solid #D9CCEF;border-radius:14px;
+  background:linear-gradient(180deg,#FDFCFF,#F3EEFB);
+  box-shadow:inset 0 1px 0 #fff,0 4px 10px -6px rgba(94,26,157,.25);
+  display:flex;align-items:baseline;justify-content:center;gap:6px;flex-wrap:wrap;}
+.plan-price-num{font-size:46px;line-height:1;font-weight:900;letter-spacing:-.02em;
+  background:linear-gradient(135deg,var(--vx-bright) 10%,var(--vx-ink) 90%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;}
+.plan-currency{font-size:15px;font-weight:800;color:var(--vx-purple);letter-spacing:.05em;}
+.plan-term{font-size:12px;font-weight:700;color:#4A3A66;}
+.plan-price-original{
+  font-size:20px;font-weight:800;color:#A83232;
+  text-decoration:line-through;text-decoration-color:#E23E3E;text-decoration-thickness:2px;
+  opacity:.7;order:-1;
+}
+.plan-discount-badge{
+  display:inline-block;padding:3px 10px;border-radius:9999px;margin-left:4px;
+  background:linear-gradient(135deg,#E23E3E,#A83232);
+  color:#fff;font-size:10px;font-weight:900;letter-spacing:.06em;
+  box-shadow:0 3px 8px -3px rgba(168,50,50,.6);transform:translateY(-2px);
+}
+.plan-includes-label{font-weight:800;letter-spacing:.08em;color:var(--vx-purple);}
+
+/* Check circles */
+.plan-check-circle{
+  width:18px;height:18px;margin-top:1px;border-radius:9999px;flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center;
+  background:linear-gradient(160deg,var(--vx-lilac),var(--vx-purple));
+  box-shadow:0 3px 6px -2px rgba(94,26,157,.55),inset 0 1px 1px rgba(255,255,255,.4);}
+.plan-check-circle svg{width:10px;height:10px;}
+.plan-card li:hover .plan-check-circle{transform:scale(1.25) rotate(-8deg);}
+
+/* Join buttons */
+.join-plan-btn{
+  position:relative;overflow:hidden;border-radius:9999px;font-weight:700;letter-spacing:.04em;color:#fff;
+  background:linear-gradient(135deg,var(--vx-bright),var(--vx-purple) 60%,var(--vx-deep));
+  box-shadow:0 12px 24px -10px rgba(94,26,157,.6);
+  transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s ease;}
+.join-plan-btn::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.35) 50%,transparent 60%);
+  transform:translateX(-120%);transition:transform .7s ease;}
+.join-plan-btn:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 18px 32px -10px rgba(94,26,157,.7);}
+.join-plan-btn:hover::after{transform:translateX(120%);}
+.plan-card.featured .join-plan-btn{
+  background:linear-gradient(135deg,var(--vx-purple),var(--vx-ink) 70%);
+  box-shadow:0 12px 26px -8px rgba(46,15,87,.7),0 0 0 1px rgba(240,200,104,.55);}
+
+/* Modal plan icon medallion */
+.plan-badge-in-modal{background:radial-gradient(circle at 32% 26%,#A578E8,#5E1A9D 70%,#2E0F57)!important;
+  box-shadow:0 0 0 2px #D7C6F2,0 8px 16px -6px rgba(46,15,87,.55);}
+
+/* ---- Section intro glass panel: keeps eyebrow/heading/paragraph legible
+   over the diagonal corner stripes instead of the stripes cutting through
+   the text with almost no contrast. ---- */
+.section-intro-panel{
+  position:relative;z-index:3;
+  background:rgba(255,255,255,.86);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.7);
+  border-radius:20px;
+  padding:20px 24px;
+  box-shadow:0 10px 32px -20px rgba(46,15,87,.35);
+}
+@media (max-width:640px){ .section-intro-panel{ padding:16px 18px; border-radius:16px; } }
+
+/* Purple "brand" variant of the intro panel, used on the Plans section per
+   the reference creative — centered, deep-purple background, light text. */
+.intro-panel-brand{
+  background:linear-gradient(135deg,var(--vx-deep) 0%,var(--vx-purple) 55%,var(--vx-bright) 100%);
+  border:1px solid rgba(255,255,255,.14);
+  box-shadow:0 20px 46px -20px rgba(46,15,87,.55),inset 0 1px 0 rgba(255,255,255,.12);
+}
+.intro-panel-brand .intro-eyebrow{color:#F0C868;}
+.intro-panel-brand h2{color:#fff;}
+.intro-panel-brand p{color:rgba(255,255,255,.82);}
+
+/* ---- JOIN MODAL — flamboyant redesign ---- */
+.join-hero{position:relative;overflow:hidden;padding:26px 26px 22px;color:#fff;
+  background:linear-gradient(135deg,var(--vx-ink) 0%,var(--vx-deep) 48%,var(--vx-purple) 100%);}
+.join-hero::before{content:"";position:absolute;top:-46px;right:-46px;width:190px;height:190px;pointer-events:none;
+  background:repeating-linear-gradient(135deg,rgba(255,255,255,.16) 0 14px,transparent 14px 20px,rgba(240,200,104,.22) 20px 30px,transparent 30px 40px);
+  clip-path:polygon(100% 0,100% 100%,0 0);}
+.join-hero::after{content:"";position:absolute;bottom:-70px;left:-50px;width:170px;height:170px;pointer-events:none;
+  background:radial-gradient(circle,rgba(139,92,199,.45),transparent 70%);}
+.join-hero-inner{position:relative;z-index:1;}
+.join-close-btn{position:absolute;top:16px;right:16px;z-index:5;display:inline-flex;align-items:center;justify-content:center;
+  width:34px;height:34px;border-radius:9999px;color:#fff;background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.22);transition:background-color .2s ease,transform .2s ease;}
+.join-close-btn:hover{background:rgba(255,255,255,.22);transform:rotate(90deg);}
+.join-close-btn svg{width:15px;height:15px;}
+.join-kicker{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:#D7C6F2;}
+.join-title{margin-top:8px;font-size:24px;line-height:1.1;font-weight:900;letter-spacing:-.01em;
+  background:linear-gradient(115deg,#fff 30%,#E9DBFB 100%);-webkit-background-clip:text;background-clip:text;color:transparent;}
+@media (min-width:640px){ .join-title{ font-size:28px; } }
+
+/* Rank progression track (replaces the old static 3-dash indicator) */
+.rank-track{margin-top:22px;display:flex;align-items:center;gap:6px;}
+.rank-seg{flex:1;height:6px;border-radius:9999px;background:rgba(255,255,255,.18);overflow:hidden;position:relative;}
+.rank-seg .fill{position:absolute;inset:0;border-radius:9999px;transform:scaleX(0);transform-origin:left;
+  background:linear-gradient(90deg,#F0C868,#B98CE0 55%,#8B5CC7);transition:transform .5s cubic-bezier(.22,1,.36,1);}
+.rank-seg.filled .fill{transform:scaleX(1);}
+.rank-labels{display:flex;justify-content:space-between;margin-top:8px;}
+.rank-labels span{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.5);transition:color .3s ease;}
+.rank-labels span.active{color:#F0C868;}
+
+/* Selected-plan chip */
+.join-plan-chip{
+  margin-top:22px;display:flex;flex-direction:column;gap:14px;border-radius:18px;padding:16px 18px;
+  background:linear-gradient(180deg,#FBF8FF,#F3ECFB);
+  border:1.5px solid #E2D3F5;box-shadow:inset 0 1px 0 #fff,0 6px 16px -12px rgba(94,26,157,.3);}
+@media (min-width:640px){ .join-plan-chip{ flex-direction:row; align-items:center; justify-content:space-between; } }
+.switch-plan-pill{
+  border-radius:9999px;padding:7px 14px;font-size:11.5px;font-weight:700;letter-spacing:.02em;
+  color:var(--vx-purple);background:#fff;border:1.5px solid #DCC9F2;transition:all .2s ease;white-space:nowrap;}
+.switch-plan-pill:hover{background:var(--vx-purple);color:#fff;border-color:var(--vx-purple);transform:translateY(-1px);
+  box-shadow:0 8px 16px -8px rgba(94,26,157,.6);}
+
+/* Form fields */
+.form-field-input{
+  width:100%;border-radius:14px;border:1.5px solid #E7E0F2;background:#FBFAFD;
+  padding:12px 16px;font-size:14px;transition:border-color .2s ease,background-color .2s ease,box-shadow .2s ease;}
+.form-field-input:focus{outline:none;border-color:var(--vx-bright);background:#fff;
+  box-shadow:0 0 0 4px rgba(107,43,184,.14);}
+.join-agree-box{border-radius:14px;background:#FBF8FF;border:1.5px solid #ECE2F8;padding:14px 16px;}
+
+/* Discord-link disclaimer on the success screen */
+.discord-link-notice{background:#FFF8EC;border:1.5px solid #F3DFAE;color:#7A5A12;}
+.discord-link-notice strong{font-weight:800;}
+
+/* Payment method selection tiles (shown after the applicant's details are
+   validated, before Paystack opens) */
+.pay-method-tile{
+  display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;
+  border-radius:16px;border:1.5px solid #E7E0F2;background:#FBFAFD;padding:20px 14px;
+  transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease,background-color .2s ease;cursor:pointer;
+}
+.pay-method-tile:hover{border-color:var(--vx-bright);background:#fff;box-shadow:0 10px 24px -16px rgba(94,26,157,.4);transform:translateY(-2px);}
+.pay-method-tile:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.pay-method-icon{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:9999px;
+  background:linear-gradient(135deg,#8B5CC7,#5E1A9D);color:#fff;flex-shrink:0;}
+.pay-method-icon svg{width:22px;height:22px;}
+.pay-method-label{font-size:13.5px;font-weight:700;}
+.pay-method-sub{font-size:11px;color:#8A8494;}
+html.dark .pay-method-tile{background:var(--nx-card-alt);border-color:var(--nx-border);}
+html.dark .pay-method-tile:hover{background:var(--nx-card);}
+html.dark .pay-method-sub{color:#948da3;}
+
+/* ============================================================
+   DAY / NIGHT MODE
+   ============================================================
+   Night mode uses a matte charcoal palette (never pure black) so
+   surfaces still read as "cards" rather than holes in the page.
+   Cross-fade: every recolored element gets a color/background/
+   border transition, so flipping the toggle reads as one smooth
+   cinematic wash rather than a hard cut. Where the browser
+   supports the View Transitions API we additionally wrap the
+   swap in a circular reveal that expands from the toggle switch
+   itself (see toggleTheme() in the script below); everywhere
+   else it gracefully falls back to the plain cross-fade. */
+:root{
+  --nx-bg:#0F0E13; --nx-surface:#18161D; --nx-card:#1F1D25; --nx-card-alt:#252229;
+  --nx-border:#332F3B; --nx-border-soft:#2A2731;
+  --nx-text:#EDEAF3; --nx-text-muted:#A79FB8;
+}
+html.dark body,
+html.dark .bg-white{background-color:var(--nx-surface);}
+html.dark #home,
+html.dark section#faq,
+html.dark section.border-t.bg-white{background-color:var(--nx-surface);}
+html.dark .bg-surface{background-color:var(--nx-bg);}
+html.dark .text-ink{color:var(--nx-text);}
+html.dark .text-muted{color:var(--nx-text-muted);}
+html.dark .border-line{border-color:var(--nx-border);}
+html.dark header.sticky{background-color:rgba(15,14,19,.85);}
+html.dark #mobile-menu{background-color:var(--nx-surface);}
+html.dark ::selection{background:#8B5CC7;color:#fff;}
+
+body, header.sticky, #mobile-menu, section, .plan-card, .join-panel, #join-panel,
+.form-field-input, .join-plan-chip, .join-agree-box, .switch-plan-pill,
+.section-intro-panel, a, button{
+  transition:background-color .6s cubic-bezier(.22,1,.36,1), color .6s ease, border-color .6s ease, box-shadow .6s ease;
+}
+
+/* Hero */
+html.dark #home h1{background:linear-gradient(115deg,#fff 10%,#C9AEEF 60%,#8B5CC7 100%);-webkit-background-clip:text;background-clip:text;color:transparent;}
+html.dark #home .bg-dot-grid{background-image:radial-gradient(rgba(139,92,199,.28) 1px,transparent 1px);}
+html.dark #home span.border-electric\/30{border-color:rgba(139,92,199,.4);background-color:rgba(139,92,199,.1);}
+
+/* About / How it works cards */
+html.dark .fade-up.rounded-xl.border,
+html.dark #about .rounded-xl,
+html.dark #how-it-works .rounded-full.bg-white{background-color:var(--nx-card)!important;border-color:var(--nx-border);}
+
+/* Plan cards */
+html.dark .plan-card{background:var(--nx-card);border-color:var(--nx-border-soft);box-shadow:0 14px 34px -20px rgba(0,0,0,.6);}
+html.dark .plan-card.featured{background:linear-gradient(var(--nx-card),var(--nx-card)) padding-box,
+  linear-gradient(150deg,var(--vx-lilac),var(--vx-purple) 45%,var(--vx-gold)) border-box;}
+html.dark .plan-name{background:linear-gradient(135deg,#C9AEEF,#fff);-webkit-background-clip:text;background-clip:text;}
+html.dark .plan-price-num{background:linear-gradient(135deg,#D9C4F5 10%,#fff 90%);-webkit-background-clip:text;background-clip:text;}
+html.dark .plan-currency,html.dark .plan-term,html.dark .plan-includes-label,html.dark .plan-stars{color:#C9AEEF;}
+html.dark .plan-card.featured .plan-stars{color:var(--vx-gold);}
+html.dark .plan-credits-box{background:linear-gradient(180deg,var(--nx-card-alt),var(--nx-card));border-color:var(--nx-border);box-shadow:none;}
+html.dark .plan-rank-row .deco-line,html.dark .plan-includes-row .deco-line{background:linear-gradient(90deg,transparent,var(--nx-border),transparent)!important;}
+html.dark .plan-features{color:#D6D0E3;}
+
+/* Section intro panel (plans) — deepen slightly for night mode */
+html.dark .intro-panel-brand{background:linear-gradient(135deg,#1B0E33 0%,#3D1470 55%,#5E1A9D 100%);border-color:rgba(255,255,255,.08);}
+
+/* Join modal + legal/success modals */
+html.dark #join-panel,html.dark #legal-backdrop>div,html.dark #success-backdrop>div{background-color:var(--nx-card);}
+html.dark .join-plan-chip{background:linear-gradient(180deg,var(--nx-card-alt),var(--nx-card));border-color:var(--nx-border);}
+html.dark .join-agree-box{background:var(--nx-card-alt);border-color:var(--nx-border);}
+html.dark .form-field-input{background:var(--nx-card-alt);border-color:var(--nx-border);color:var(--nx-text);}
+html.dark .form-field-input:focus{background:var(--nx-card);}
+html.dark .form-field-input::placeholder{color:#6E6879;}
+html.dark .switch-plan-pill{background:var(--nx-card-alt);border-color:var(--nx-border);color:#C9AEEF;}
+html.dark #success-icon{background-color:rgba(5,150,105,.18);}
+html.dark .discord-link-notice{background:rgba(240,200,104,.12);border-color:rgba(240,200,104,.3);color:#F0C868;}
+
+/* FAQ + social + disclaimer */
+html.dark #faq .divide-line>*{border-color:var(--nx-border);}
+html.dark .social-link{border-color:var(--nx-border);}
+
+/* Scrollbars */
+html.dark .custom-scroll{scrollbar-color:#8B5CC7 var(--nx-card-alt);}
+html.dark .custom-scroll::-webkit-scrollbar-track{background:var(--nx-card-alt);}
+
+/* ---- Theme toggle switch ---- */
+.theme-switch{position:relative;display:inline-flex;align-items:center;justify-content:space-between;
+  width:54px;height:30px;flex-shrink:0;border-radius:9999px;padding:0 6px;cursor:pointer;
+  background:linear-gradient(135deg,#EEE8FA,#E1D2F5);border:1px solid #DCC9F2;
+  transition:background .6s ease,border-color .6s ease;}
+.theme-switch-icon{position:relative;z-index:1;width:15px;height:15px;display:flex;align-items:center;color:var(--vx-purple);
+  transition:opacity .4s ease,color .4s ease;}
+.theme-switch-icon svg{width:100%;height:100%;}
+.theme-switch-moon{color:#8B5CC7;opacity:.4;}
+.theme-switch-thumb{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:9999px;
+  background:linear-gradient(160deg,#fff,#F3ECFB);box-shadow:0 3px 8px -2px rgba(94,26,157,.5);
+  transition:transform .5s cubic-bezier(.65,0,.35,1),background .5s ease;}
+html.dark .theme-switch{background:linear-gradient(135deg,#242129,#302C37);border-color:var(--nx-border);}
+html.dark .theme-switch-thumb{transform:translateX(24px);background:linear-gradient(160deg,#3A3642,#232028);}
+html.dark .theme-switch-sun{opacity:.35;}
+html.dark .theme-switch-moon{opacity:1;color:#F0C868;}
+
+/* View Transitions circular reveal (progressive enhancement — browsers
+   without support simply keep the plain color cross-fade above) */
+::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal;}
+::view-transition-old(root){z-index:1;}
+::view-transition-new(root){z-index:2;}
+html.theme-animating::view-transition-new(root){
+  animation:vx-reveal .65s cubic-bezier(.65,0,.35,1);
+}
+@keyframes vx-reveal{
+  from{clip-path:circle(0% at var(--vx-origin-x,50%) var(--vx-origin-y,50%));}
+  to{clip-path:circle(150% at var(--vx-origin-x,50%) var(--vx-origin-y,50%));}
+}
+/* Promo ticker banner — sits above the nav, scrolls continuously */
+.promo-ticker{
+  position:sticky;top:0;z-index:60;
+  width:100%;height:34px;overflow:hidden;
+  background:linear-gradient(90deg,#3B0F66,#5E1A9D 50%,#3B0F66);
+  color:#fff;white-space:nowrap;
+}
+.promo-ticker__track{
+  display:inline-flex;height:34px;align-items:center;
+  animation:promo-ticker-scroll 26s linear infinite;
+  will-change:transform;
+}
+.promo-ticker__track span{
+  display:inline-block;padding:0 2.25rem;
+  font-size:12.5px;font-weight:700;letter-spacing:.03em;white-space:nowrap;
+}
+@keyframes promo-ticker-scroll{
+  from{transform:translateX(0);}
+  to{transform:translateX(-50%);}
+}
+@media (prefers-reduced-motion: reduce){
+  .promo-ticker__track{animation:none;}
+}
+html.dark .promo-ticker{background:linear-gradient(90deg,#2A0B4A,#4A1580 50%,#2A0B4A);}
+</style>
+<meta name="theme-color" content="#2E0F57">
+<script>
+  // Applied as early as possible (before first paint) to avoid a light-mode
+  // flash: honors a saved choice, otherwise falls back to the OS preference.
+  (function(){
+    var saved = null;
+    try { saved = localStorage.getItem('vx-theme'); } catch(e){}
+    var wantsDark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (wantsDark) document.documentElement.classList.add('dark');
+  })();
+</script>
+</head>
+<body class="bg-white text-ink antialiased">
+
+<!-- ============ PROMO TICKER ============ -->
+<div class="promo-ticker" id="promo-ticker">
+  <div class="promo-ticker__track" aria-hidden="false">
+    <span>LAUNCH PROMO — 50% OFF ALL PLANS &bull; Warrior, Commander and General &bull; Offer ends September 30 &bull; Trade with precision &bull; Join the War Room today &bull;</span>
+    <span aria-hidden="true">LAUNCH PROMO — 50% OFF ALL PLANS &bull; Warrior, Commander and General &bull; Offer ends September 30 &bull; Trade with precision &bull; Join the War Room today &bull;</span>
+  </div>
+</div>
+
+<!-- ============ NAVBAR ============ -->
+<header class="sticky top-[34px] z-40 bg-white/85 backdrop-blur-md">
+  <nav class="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-8">
+    <a href="#home" class="text-lg font-extrabold tracking-tight">VERX<span class="text-electric">OME</span></a>
+    <ul class="hidden items-center gap-8 md:flex">
+      <li><a href="#home" class="text-sm font-medium text-muted hover:text-ink">Home</a></li>
+      <li><a href="#about" class="text-sm font-medium text-muted hover:text-ink">About</a></li>
+      <li><a href="#how-it-works" class="text-sm font-medium text-muted hover:text-ink">How It Works</a></li>
+      <li><a href="#plans" class="text-sm font-medium text-muted hover:text-ink">Plans</a></li>
+      <li><a href="#faq" class="text-sm font-medium text-muted hover:text-ink">FAQ</a></li>
+    </ul>
+    <div class="flex items-center gap-3">
+      <button id="theme-toggle" type="button" aria-label="Switch to dark mode" aria-pressed="false" onclick="toggleTheme(event)" class="theme-switch">
+        <span class="theme-switch-icon theme-switch-sun"><svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-16,0a48,48,0,1,0-48,48A48.05,48.05,0,0,0,176,128ZM58.34,69.66A8,8,0,0,0,69.66,58.34l-16-16A8,8,0,0,0,42.34,53.66Zm0,116.68-16,16a8,8,0,0,0,11.32,11.32l16-16a8,8,0,0,0-11.32-11.32ZM192,72a8,8,0,0,0,5.66-2.34l16-16a8,8,0,0,0-11.32-11.32l-16,16A8,8,0,0,0,192,72Zm5.66,114.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32-11.32ZM48,128a8,8,0,0,0-8-8H16a8,8,0,0,0,0,16H40A8,8,0,0,0,48,128Zm80,80a8,8,0,0,0-8,8v24a8,8,0,0,0,16,0V216A8,8,0,0,0,128,208Zm112-88H216a8,8,0,0,0,0,16h24a8,8,0,0,0,0-16Z"/></svg></span>
+        <span class="theme-switch-icon theme-switch-moon"><svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.84,104.84,0,0,0-52.91,37A104,104,0,0,0,136,224a103.09,103.09,0,0,0,62.52-20.88,104.84,104.84,0,0,0,37-52.91A8,8,0,0,0,233.54,142.23ZM188.9,190.34A88,88,0,0,1,65.66,67.11a89,89,0,0,1,31.4-26A106,106,0,0,0,96,56,104.11,104.11,0,0,0,200,160a106,106,0,0,0,14.92-1.06A89,89,0,0,1,188.9,190.34Z"/></svg></span>
+        <span class="theme-switch-thumb"></span>
+      </button>
+      <a href="#plans" class="hidden rounded-full bg-deep px-5 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.03] hover:bg-electric md:inline-block">Join the War Room</a>
+      <button aria-label="Open menu" onclick="toggleMobileMenu()" class="rounded-md p-2 text-ink md:hidden">
+        <svg id="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+  </nav>
+  <div id="mobile-menu" class="hidden border-t border-line bg-white md:hidden">
+    <ul class="flex flex-col px-5 py-4">
+      <li><a href="#home" onclick="toggleMobileMenu()" class="block py-3 text-base font-medium">Home</a></li>
+      <li><a href="#about" onclick="toggleMobileMenu()" class="block py-3 text-base font-medium">About</a></li>
+      <li><a href="#how-it-works" onclick="toggleMobileMenu()" class="block py-3 text-base font-medium">How It Works</a></li>
+      <li><a href="#plans" onclick="toggleMobileMenu()" class="block py-3 text-base font-medium">Plans</a></li>
+      <li><a href="#faq" onclick="toggleMobileMenu()" class="block py-3 text-base font-medium">FAQ</a></li>
+      <li class="pt-2"><a href="#plans" onclick="toggleMobileMenu()" class="block w-full rounded-full bg-deep px-5 py-3 text-center text-sm font-semibold text-white">Join the War Room</a></li>
+    </ul>
+  </div>
+</header>
+
+<!-- ============ HERO ============ -->
+<section id="home" class="relative overflow-hidden bg-white pt-16 sm:pt-24">
+  <div class="pointer-events-none absolute inset-0 bg-dot-grid opacity-60" style="mask-image: radial-gradient(ellipse 60% 50% at 50% 0%, #000 10%, transparent 70%);"></div>
+  <div class="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-14 px-5 pb-20 sm:px-8 lg:grid-cols-[1.15fr_0.85fr] lg:pb-28">
+    <div class="fade-up" data-fade>
+      <span class="inline-block rounded-full border border-electric/30 bg-electric/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-electric-600">Focused Signals. Smart Analysis. Disciplined Execution.</span>
+      <h1 class="mt-6 text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">Trade with precision.</h1>
+      <p class="mt-4 text-xl font-semibold text-deep-800">Welcome to the Verxome Trades War Room.</p>
+      <p class="mt-5 max-w-xl text-base leading-relaxed text-muted">A focused trading community built around structured market analysis, actionable signals, disciplined risk management, and continuous improvement.</p>
+      <div class="mt-9 flex flex-wrap items-center gap-4">
+        <a href="#plans" class="rounded-full bg-deep px-7 py-3.5 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-electric">Join the War Room</a>
+        <a href="#about" class="rounded-full border border-line px-7 py-3.5 text-sm font-semibold hover:border-electric hover:text-electric-600">Learn More</a>
+      </div>
+    </div>
+
+    <div class="flex justify-center lg:justify-end">
+      <div class="float-card w-full max-w-sm rounded-2xl border border-electric/25 p-5 text-white shadow-xl" style="background:linear-gradient(160deg,#2E0F57 0%,#5E1A9D 60%,#6B2BB8 100%);">
+        <div class="flex items-center justify-between">
+          <span class="rounded-full border border-electric-400/40 bg-white/5 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-electric-400">Example Signal</span>
+          <span class="flex items-center gap-1.5 text-[11px] font-medium text-white/50"><span class="h-1.5 w-1.5 rounded-full bg-electric-400 animate-pulse"></span>Illustrative</span>
+        </div>
+        <div class="mt-4 flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white" style="background:linear-gradient(160deg,#F0C868 0%,#B8860B 100%);"><svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" fill="currentColor" style="width:16px;height:16px;"><path d="M207.58,63.84C186.85,53.48,159.33,48,128,48S69.15,53.48,48.42,63.84,16,88.78,16,104v48c0,15.22,11.82,29.85,32.42,40.16S96.67,208,128,208s58.85-5.48,79.58-15.84S240,167.22,240,152V104C240,88.78,228.18,74.15,207.58,63.84Zm-87.58,96v32c-19-.62-35-3.42-48-7.49V153.05A203.43,203.43,0,0,0,120,159.86Zm16,0a203.43,203.43,0,0,0,48-6.81v31.31c-13,4.07-29,6.87-48,7.49ZM32,152V133.53a82.88,82.88,0,0,0,16.42,10.63c2.43,1.21,5,2.35,7.58,3.43V178C40.17,170.16,32,160.29,32,152Zm168,26V147.59c2.61-1.08,5.15-2.22,7.58-3.43A82.88,82.88,0,0,0,224,133.53V152C224,160.29,215.83,170.16,200,178Z"/></svg></div>
+            <div><div class="text-lg font-bold tracking-tight">XAUUSD</div><div class="mt-0.5 text-[11px] uppercase tracking-wide text-white/50">Gold Spot</div></div>
+          </div>
+          <span class="rounded-md bg-emerald-500/15 px-3 py-1 text-sm font-bold text-emerald-400">BUY</span>
+        </div>
+        <svg viewBox="0 0 240 70" class="ticker-svg mt-4 h-16 w-full opacity-80" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0,60 L20,55 L40,58 L60,40 L80,45 L100,30 L120,34 L140,20 L160,26 L180,12 L200,18 L220,8 L240,14" fill="none" stroke="#8B5CC7" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <dl class="mt-4 space-y-2 border-t border-white/10 pt-4 text-sm">
+          <div class="flex justify-between"><dt class="text-white/55 font-medium">ENTRY</dt><dd class="font-mono font-semibold">1,485.00</dd></div>
+          <div class="flex justify-between"><dt class="text-white/55 font-medium">TP1</dt><dd class="font-mono font-semibold">1,495.00</dd></div>
+          <div class="flex justify-between"><dt class="text-white/55 font-medium">TP2</dt><dd class="font-mono font-semibold">1,510.00</dd></div>
+          <div class="flex justify-between"><dt class="text-white/55 font-medium">TP3</dt><dd class="font-mono font-semibold">1,530.00</dd></div>
+          <div class="flex justify-between"><dt class="text-white/55 font-medium">SL</dt><dd class="font-mono font-semibold text-rose-400">1,460.00</dd></div>
+        </dl>
+        <p class="mt-4 text-[11px] leading-relaxed text-white/40">For illustration only. Not a live or active trade recommendation.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ABOUT ============ -->
+<section id="about" class="border-t border-line bg-surface py-24">
+  <div class="mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="max-w-2xl fade-up" data-fade>
+      <span class="text-xs font-semibold uppercase tracking-wider text-electric-600">About Verxome</span>
+      <h2 class="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">Built for traders who take the market seriously.</h2>
+      <p class="mt-5 text-base leading-relaxed text-muted">Rather than attempting to cover every pair and every session, Verxome trades a small, selective set of markets — three pairs we know deeply, watched with discipline rather than noise. Signals are issued Monday through Thursday, only when the conditions actually call for it.</p>
+    </div>
+    <div class="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div class="fade-up flex items-center gap-4 rounded-xl border border-line bg-white p-6 shadow-sm" data-fade>
+        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white" style="background:linear-gradient(160deg,#F0C868 0%,#B8860B 100%);"><svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" fill="currentColor" style="width:22px;height:22px;"><path d="M207.58,63.84C186.85,53.48,159.33,48,128,48S69.15,53.48,48.42,63.84,16,88.78,16,104v48c0,15.22,11.82,29.85,32.42,40.16S96.67,208,128,208s58.85-5.48,79.58-15.84S240,167.22,240,152V104C240,88.78,228.18,74.15,207.58,63.84Zm-87.58,96v32c-19-.62-35-3.42-48-7.49V153.05A203.43,203.43,0,0,0,120,159.86Zm16,0a203.43,203.43,0,0,0,48-6.81v31.31c-13,4.07-29,6.87-48,7.49ZM32,152V133.53a82.88,82.88,0,0,0,16.42,10.63c2.43,1.21,5,2.35,7.58,3.43V178C40.17,170.16,32,160.29,32,152Zm168,26V147.59c2.61-1.08,5.15-2.22,7.58-3.43A82.88,82.88,0,0,0,224,133.53V152C224,160.29,215.83,170.16,200,178Z"/></svg></div>
+        <div><div class="text-2xl font-extrabold text-deep-800">XAUUSD</div><div class="mt-1 text-sm text-muted">Gold</div></div>
+      </div>
+      <div class="fade-up flex items-center gap-4 rounded-xl border border-line bg-white p-6 shadow-sm" data-fade>
+        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-base font-extrabold text-white" style="background:linear-gradient(160deg,#3D6FD1 0%,#1E4C9A 100%);">€</div>
+        <div><div class="text-2xl font-extrabold text-deep-800">EURUSD</div><div class="mt-1 text-sm text-muted">Euro / US Dollar</div></div>
+      </div>
+      <div class="fade-up flex items-center gap-4 rounded-xl border border-line bg-white p-6 shadow-sm" data-fade>
+        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-base font-extrabold text-white" style="background:linear-gradient(160deg,#D1495B 0%,#9E1B32 100%);">£</div>
+        <div><div class="text-2xl font-extrabold text-deep-800">GBPUSD</div><div class="mt-1 text-sm text-muted">British Pound / US Dollar</div></div>
+      </div>
+    </div>
+    <p class="mt-8 max-w-2xl text-sm leading-relaxed text-muted">Verxome does not promise guaranteed profits, guaranteed winning trades, 100% accuracy, or risk free trading. Trading carries real risk, and every member is responsible for their own account and decisions.</p>
+  </div>
+</section>
+
+<!-- ============ HOW IT WORKS ============ -->
+<section id="how-it-works" class="border-t border-line bg-white py-24">
+  <div class="mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="max-w-2xl fade-up" data-fade>
+      <span class="text-xs font-semibold uppercase tracking-wider text-electric-600">The Process</span>
+      <h2 class="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">Know the setup. Understand the reasoning. Execute with discipline.</h2>
+    </div>
+    <div class="relative mt-14 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="absolute left-0 right-0 top-6 hidden h-px bg-line lg:block"></div>
+      <div class="fade-up relative" data-fade><div class="relative z-10 inline-flex h-12 w-12 items-center justify-center rounded-full border border-electric/30 bg-white text-sm font-bold text-electric-600 shadow-sm">01</div><h3 class="mt-4 text-lg font-bold">Analyze</h3><p class="mt-2 text-sm leading-relaxed text-muted">Market structure, price action, liquidity, key levels and overall conditions are assessed.</p></div>
+      <div class="fade-up relative" data-fade><div class="relative z-10 inline-flex h-12 w-12 items-center justify-center rounded-full border border-electric/30 bg-white text-sm font-bold text-electric-600 shadow-sm">02</div><h3 class="mt-4 text-lg font-bold">Identify</h3><p class="mt-2 text-sm leading-relaxed text-muted">Potential trade opportunities are identified when the setup meets the required criteria.</p></div>
+      <div class="fade-up relative" data-fade><div class="relative z-10 inline-flex h-12 w-12 items-center justify-center rounded-full border border-electric/30 bg-white text-sm font-bold text-electric-600 shadow-sm">03</div><h3 class="mt-4 text-lg font-bold">Execute</h3><p class="mt-2 text-sm leading-relaxed text-muted">Members receive structured trade information including entry, take profit levels and stop loss.</p></div>
+      <div class="fade-up relative" data-fade><div class="relative z-10 inline-flex h-12 w-12 items-center justify-center rounded-full border border-electric/30 bg-white text-sm font-bold text-electric-600 shadow-sm">04</div><h3 class="mt-4 text-lg font-bold">Review</h3><p class="mt-2 text-sm leading-relaxed text-muted">Performance and decisions are reviewed to continuously improve execution and discipline.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PLANS ============ -->
+<section id="plans" class="border-t border-line bg-surface py-24">
+  <div class="mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="section-intro-panel intro-panel-brand mx-auto max-w-2xl text-center fade-up" data-fade>
+      <span class="intro-eyebrow text-xs font-semibold uppercase tracking-wider">Membership</span>
+      <h2 class="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">Choose your level of access.</h2>
+      <p class="mt-4 text-base">Every plan runs for a 6 month term. Your risk, your account, your responsibility — every tier is built to support disciplined execution, not shortcuts.</p>
+    </div>
+
+    <div id="plans-grid" class="mt-16 grid grid-cols-1 gap-8 lg:grid-cols-3">
+      <!-- Plan cards are rendered from verxome-api.js (VerxomeAPI.getPlans) — see initPlans() below -->
+    </div>
+
+    <p class="mx-auto mt-10 max-w-2xl text-center text-sm leading-relaxed text-muted">Advance market analysis (Commander and above) gives members access to the charts and reasoning behind a potential setup before the final signal is released — it does not mean a guaranteed or better outcome on any individual trade.</p>
+  </div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section id="faq" class="border-t border-line bg-white py-24">
+  <div class="mx-auto max-w-3xl px-5 sm:px-8">
+    <span class="text-xs font-semibold uppercase tracking-wider text-electric-600">Questions</span>
+    <h2 class="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">Frequently asked questions.</h2>
+    <div class="mt-10 divide-y divide-line border-y border-line" id="faq-list"></div>
+  </div>
+</section>
+
+<!-- ============ DISCLAIMER ============ -->
+<section class="border-t border-line bg-surface py-14">
+  <div class="mx-auto max-w-4xl px-5 sm:px-8">
+    <h2 class="text-sm font-bold uppercase tracking-wider">Risk Disclaimer</h2>
+    <p class="mt-3 text-sm leading-relaxed text-muted">Verxome provides market analysis, educational content and trading signals for informational and educational purposes. Trading financial markets involves substantial risk and may result in losses. Members are responsible for their own trading decisions, account management, position sizing and risk. Past performance is not indicative of future results. Nothing on this website constitutes personalized financial advice or a guarantee of returns.</p>
+  </div>
+</section>
+
+<!-- ============ SOCIAL ============ -->
+<section class="border-t border-line bg-white py-20">
+  <div class="mx-auto max-w-6xl px-5 text-center sm:px-8">
+    <span class="text-xs font-semibold uppercase tracking-wider text-electric-600">Stay Connected</span>
+    <h2 class="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">Follow the journey.</h2>
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
+      <a href="https://www.youtube.com/@verxome" target="_blank" rel="noopener noreferrer" class="social-link flex items-center gap-2.5 rounded-full border border-line px-6 py-3 text-sm font-semibold hover:border-electric hover:text-electric-600"><svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M234.33,69.52a24,24,0,0,0-14.49-16.4C185.56,39.88,131,40,128,40s-57.56-.12-91.84,13.12a24,24,0,0,0-14.49,16.4C19.08,79.5,16,97.74,16,128s3.08,48.5,5.67,58.48a24,24,0,0,0,14.49,16.41C69,215.56,120.4,216,127.34,216h1.32c6.94,0,58.37-.44,91.18-13.11a24,24,0,0,0,14.49-16.41c2.59-10,5.67-28.22,5.67-58.48S236.92,79.5,234.33,69.52Zm-73.74,65-40,28A8,8,0,0,1,108,156V100a8,8,0,0,1,12.59-6.55l40,28a8,8,0,0,1,0,13.1Z"/></svg> YouTube — @verxome</a>
+      <a href="https://www.instagram.com/verxome" target="_blank" rel="noopener noreferrer" class="social-link flex items-center gap-2.5 rounded-full border border-line px-6 py-3 text-sm font-semibold hover:border-electric hover:text-electric-600"><svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M176,24H80A56.06,56.06,0,0,0,24,80v96a56.06,56.06,0,0,0,56,56h96a56.06,56.06,0,0,0,56-56V80A56.06,56.06,0,0,0,176,24ZM128,176a48,48,0,1,1,48-48A48.05,48.05,0,0,1,128,176Zm60-96a12,12,0,1,1,12-12A12,12,0,0,1,188,80Zm-28,48a32,32,0,1,1-32-32A32,32,0,0,1,160,128Z"/></svg> Instagram — @verxome</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="border-t border-line bg-deep-900 py-14 text-white/70">
+  <div class="mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="grid grid-cols-1 gap-10 sm:grid-cols-3">
+      <div>
+        <p class="text-lg font-extrabold tracking-tight text-white">VERX<span class="text-electric-400">OME</span></p>
+        <p class="mt-1 text-sm font-medium text-white/50">Trades War Room</p>
+        <p class="mt-3 text-sm leading-relaxed text-white/50">Focused Signals. Smart Analysis. Disciplined Execution.</p>
+      </div>
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wide text-white/40">Navigate</p>
+        <ul class="mt-3 space-y-2 text-sm">
+          <li><a href="#home" class="hover:text-white">Home</a></li>
+          <li><a href="#about" class="hover:text-white">About</a></li>
+          <li><a href="#how-it-works" class="hover:text-white">How It Works</a></li>
+          <li><a href="#plans" class="hover:text-white">Plans</a></li>
+          <li><a href="#faq" class="hover:text-white">FAQ</a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wide text-white/40">Contact & Legal</p>
+        <ul class="mt-3 space-y-2 text-sm">
+          <li><a href="mailto:verxomtradingroom@gmail.com" class="hover:text-white">verxomtradingroom@gmail.com</a></li>
+          <li><button onclick="openLegal('terms')" class="hover:text-white text-left">Terms &amp; Conditions</button></li>
+          <li><button onclick="openLegal('privacy')" class="hover:text-white text-left">Privacy Policy</button></li>
+        </ul>
+      </div>
+    </div>
+    <div class="mt-12 border-t border-white/10 pt-6 text-xs text-white/40">© 2026 Verxome Trades War Room. All rights reserved.</div>
+  </div>
+</footer>
+
+<!-- ============ JOIN MODAL ============ -->
+<div id="join-backdrop" class="modal-backdrop fixed inset-0 z-50 hidden items-end justify-center bg-ink/60 backdrop-blur-sm sm:items-center sm:p-6" onclick="closeJoinIfBackdrop(event)">
+  <div id="join-panel" class="modal-panel w-full max-w-lg overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-w-2xl sm:rounded-3xl">
+
+    <div class="join-hero">
+      <button onclick="closeJoin()" aria-label="Close" class="join-close-btn"><svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z"/></svg></button>
+      <div class="join-hero-inner">
+        <span class="join-kicker">Membership Application</span>
+        <h2 class="join-title">Join the War Room</h2>
+        <div class="rank-track" id="rank-track">
+          <div class="rank-seg" data-tier="warrior"><span class="fill"></span></div>
+          <div class="rank-seg" data-tier="commander"><span class="fill"></span></div>
+          <div class="rank-seg" data-tier="general"><span class="fill"></span></div>
+        </div>
+        <div class="rank-labels">
+          <span data-tier-label="warrior">Warrior</span>
+          <span data-tier-label="commander">Commander</span>
+          <span data-tier-label="general">General</span>
+        </div>
+      </div>
+    </div>
+
+  <div class="custom-scroll max-h-[78vh] overflow-y-auto p-6 sm:p-9 sm:pt-7">
+    <div class="join-plan-chip" id="join-plan-chip">
+      <div class="flex items-center gap-3">
+        <div class="plan-badge-in-modal flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#8B5CC7] to-[#5E1A9D] text-white" id="modal-plan-icon"></div>
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wide text-electric-600">Selected Plan</p>
+          <p class="mt-1 text-lg font-bold" id="modal-plan-name">COMMANDER</p>
+          <p class="text-sm text-muted" id="modal-plan-price">GH₵350 / 6 MONTHS</p>
+        </div>
+      </div>
+      <div class="flex flex-row flex-wrap gap-2 sm:justify-end" id="switch-plan-links"></div>
+    </div>
+
+    <form id="join-form" class="mt-7" onsubmit="handleJoinSubmit(event)" novalidate>
+      <div class="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2">
+        <div class="sm:col-span-2">
+          <label class="mb-1.5 block text-sm font-semibold">Full Legal Name</label>
+          <input id="f-fullName" type="text" placeholder="John Michael Doe" class="form-field-input" />
+          <p class="mt-1.5 text-xs text-rose-600 hidden" id="err-fullName"></p>
+        </div>
+        <div>
+          <label class="mb-1.5 block text-sm font-semibold">Discord Username</label>
+          <input id="f-discord" type="text" placeholder="username" class="form-field-input" />
+          <p class="mt-1.5 text-xs text-muted" id="helper-discord">Enter your exact username.</p>
+          <p class="mt-1.5 text-xs text-rose-600 hidden" id="err-discord"></p>
+        </div>
+        <div>
+          <label class="mb-1.5 block text-sm font-semibold">Confirm Discord Username</label>
+          <input id="f-discord2" type="text" placeholder="username" class="form-field-input" />
+          <p class="mt-1.5 text-xs text-rose-600 hidden" id="err-discord2"></p>
+        </div>
+        <div>
+          <label class="mb-1.5 block text-sm font-semibold">Telephone Number</label>
+          <input id="f-phone" type="tel" placeholder="+233 24 123 4567" class="form-field-input" />
+          <p class="mt-1.5 text-xs text-rose-600 hidden" id="err-phone"></p>
+        </div>
+        <div>
+          <label class="mb-1.5 block text-sm font-semibold">Email Address</label>
+          <input id="f-email" type="email" placeholder="you@example.com" class="form-field-input" />
+          <p class="mt-1.5 text-xs text-rose-600 hidden" id="err-email"></p>
+        </div>
+        <label class="join-agree-box sm:col-span-2 flex items-start gap-3 text-sm text-muted">
+          <input id="f-agree" type="checkbox" class="mt-0.5 h-4 w-4 shrink-0 rounded border-line accent-electric" />
+          <span>I confirm that the information provided is accurate and I understand that Verxome provides educational and informational trading content. Trading involves risk and I am responsible for my own trading decisions and account management.</span>
+        </label>
+        <p class="sm:col-span-2 text-xs text-rose-600 hidden" id="err-agree"></p>
+
+        <button type="submit" class="join-plan-btn sm:col-span-2 flex w-full items-center justify-center gap-2 py-4 text-sm">
+          Continue to Payment
+        </button>
+      </div>
+    </form>
+
+    <div id="join-payment-select" class="mt-7 hidden">
+      <button type="button" onclick="backToJoinForm()" class="inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink">
+        <svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" fill="currentColor" style="width:15px;height:15px;"><path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"/></svg>
+        Back to details
+      </button>
+
+      <div class="join-plan-chip mt-4">
+        <div class="flex items-center gap-3">
+          <div class="plan-badge-in-modal flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#8B5CC7] to-[#5E1A9D] text-white" id="payment-select-plan-icon"></div>
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wide text-electric-600">You're paying for</p>
+            <p class="mt-1 text-lg font-bold" id="payment-select-plan-name">COMMANDER</p>
+            <p class="text-sm text-muted" id="payment-select-plan-price">GH₵350 / 6 MONTHS</p>
+          </div>
+        </div>
+      </div>
+
+      <p class="mt-7 text-sm font-semibold">Choose how you'd like to pay</p>
+
+      <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:mx-auto sm:max-w-md">
+        <button type="button" class="pay-method-tile" onclick="selectPaymentMethod(['mobile_money'])">
+          <span class="pay-method-icon"><svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M176,16H80A24,24,0,0,0,56,40V216a24,24,0,0,0,24,24h96a24,24,0,0,0,24-24V40A24,24,0,0,0,176,16Zm8,200a8,8,0,0,1-8,8H80a8,8,0,0,1-8-8V40a8,8,0,0,1,8-8h96a8,8,0,0,1,8,8ZM136,184a12,12,0,1,1-12-12A12,12,0,0,1,136,184Z"/></svg></span>
+          <span class="pay-method-label">Mobile Money</span>
+          <span class="pay-method-sub">MTN · Telecel Cash · AirtelTigo</span>
+        </button>
+        <button type="button" class="pay-method-tile" onclick="selectPaymentMethod(['card'])">
+          <span class="pay-method-icon"><svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M224,48H32A16,16,0,0,0,16,64V192a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V64A16,16,0,0,0,224,48Zm0,16V96H32V64Zm0,128H32V112H224v80Zm-16-32a8,8,0,0,1-8,8H160a8,8,0,0,1,0-16h40A8,8,0,0,1,208,160Z"/></svg></span>
+          <span class="pay-method-label">Visa / Mastercard</span>
+          <span class="pay-method-sub">Debit or credit card</span>
+        </button>
+      </div>
+
+      <p class="mt-4 text-center text-xs text-rose-600 hidden" id="err-payment"></p>
+      <p class="mt-4 text-center text-xs text-muted" id="payment-select-status"></p>
+    </div>
+  </div>
+  </div>
+</div>
+
+<!-- ============ SUCCESS MODAL ============ -->
+<div id="success-backdrop" class="modal-backdrop fixed inset-0 z-50 hidden items-center justify-center bg-ink/60 backdrop-blur-sm p-6">
+  <div class="w-full max-w-md rounded-3xl border border-line bg-white p-8 text-center shadow-2xl">
+    <div id="success-icon" class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100"><svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm45.66,85.66-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32Z"/></svg></div>
+    <h1 class="mt-5 text-2xl font-extrabold tracking-tight">Welcome to the War Room</h1>
+    <p class="mt-2 text-sm text-muted">Your application has been received. We'll review your details and send your Discord access shortly.</p>
+    <div class="mt-6 space-y-2 rounded-xl bg-surface p-4 text-sm text-left">
+      <div class="flex justify-between"><span class="text-muted">Plan</span><span class="font-semibold" id="success-plan"></span></div>
+      <div class="flex justify-between"><span class="text-muted">Status</span><span class="font-semibold text-emerald-600">Received</span></div>
+      <div class="flex justify-between"><span class="text-muted">Reference</span><span class="font-semibold font-mono text-xs" id="success-ref"></span></div>
+    </div>
+    <div class="discord-link-notice mt-5 rounded-xl p-4 text-left text-xs leading-relaxed">
+      <div class="flex items-start gap-2.5">
+        <span class="mt-0.5 shrink-0"><svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" fill="currentColor" style="width:16px;height:16px;"><path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM120,104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm8,88a12,12,0,1,1,12-12A12,12,0,0,1,128,192Z"/></svg></span>
+        <p><strong>Important:</strong> You will be sent a Discord invite link that is valid for <strong>one use only</strong> and <strong>expires 30 days</strong> after it's issued. Verxome is not responsible for lost access if the link isn't used before it expires — please click it as soon as you receive it.</p>
+      </div>
+    </div>
+    <button onclick="closeSuccess()" class="mt-6 inline-block w-full rounded-full bg-deep py-3.5 text-sm font-semibold text-white hover:bg-electric">Return to Verxome</button>
+  </div>
+</div>
+
+<!-- ============ LEGAL MODAL ============ -->
+<div id="legal-backdrop" class="modal-backdrop fixed inset-0 z-50 hidden items-center justify-center bg-ink/60 backdrop-blur-sm p-6">
+  <div class="w-full max-w-2xl overflow-hidden rounded-3xl border border-line bg-white shadow-2xl">
+  <div class="custom-scroll max-h-[85vh] overflow-y-auto p-8">
+    <div class="flex items-center justify-between">
+      <h2 class="text-xl font-extrabold" id="legal-title">Terms &amp; Conditions</h2>
+      <button onclick="closeLegal()" class="icon-btn rounded-full p-1.5 text-muted hover:bg-surface hover:text-ink"><svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z"/></svg></button>
+    </div>
+    <div id="legal-body" class="mt-5 space-y-5 text-sm leading-relaxed text-muted"></div>
+  </div>
+  </div>
+</div>
+
+<script>
+// All plan, FAQ, application and validation data/logic now lives in
+// verxome-api.js (VerxomeAPI). This script only handles the DOM.
+
+let currentPlanId = 'commander';
+let plansCache = {}; // populated by initPlans(), keyed by plan id
+let pendingFormData = null; // validated form data, held between "Continue to Payment" and the actual Paystack charge
+
+// Every icon on the page is a real Phosphor SVG — no emoji anywhere, so
+// nothing renders as a blurry platform-specific bitmap glyph.
+const SITE_ICONS = {
+  sword: '<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M216,32H152a8,8,0,0,0-6.34,3.12l-64,83.21L72,108.69a16,16,0,0,0-22.64,0l-8.69,8.7a16,16,0,0,0,0,22.63l22,22-32,32a16,16,0,0,0,0,22.63l8.69,8.68a16,16,0,0,0,22.62,0l32-32,22,22a16,16,0,0,0,22.64,0l8.69-8.7a16,16,0,0,0,0-22.63l-9.64-9.64,83.21-64A8,8,0,0,0,224,104V40A8,8,0,0,0,216,32Zm-8,68.06-81.74,62.88L115.32,152l50.34-50.34a8,8,0,0,0-11.32-11.31L104,140.68,93.07,129.74,155.94,48H208Z"/></svg>',
+  shieldStar: '<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M208,40H48A16,16,0,0,0,32,56v56c0,52.72,25.52,84.67,46.93,102.19,23.06,18.86,46,25.27,47,25.53a8,8,0,0,0,4.2,0c1-.26,23.91-6.67,47-25.53C198.48,196.67,224,164.72,224,112V56A16,16,0,0,0,208,40Zm-37,87.43-30.31,12.12L158.4,163.2a8,8,0,1,1-12.8,9.6L128,149.33,110.4,172.8a8,8,0,1,1-12.8-9.6l17.74-23.65L85,127.43A8,8,0,1,1,91,112.57l29,11.61V96a8,8,0,0,1,16,0v28.18l29-11.61A8,8,0,1,1,171,127.43Z"/></svg>',
+  crown: '<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M239.75,90.81c0,.11,0,.21-.07.32L217,195a16,16,0,0,1-15.72,13H54.71A16,16,0,0,1,39,195L16.32,91.13c0-.11-.05-.21-.07-.32A16,16,0,0,1,44,77.39l33.67,36.29,35.8-80.29a1,1,0,0,0,0-.1,16,16,0,0,1,29.06,0,1,1,0,0,0,0,.1l35.8,80.29L212,77.39a16,16,0,0,1,27.71,13.42Z"/></svg>',
+  check: '<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"/></svg>',
+  checkCircle: '<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm45.66,85.66-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32Z"/></svg>',
+  x: '<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z"/></svg>',
+  caretDown: '<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M216.49,104.49l-80,80a12,12,0,0,1-17,0l-80-80a12,12,0,0,1,17-17L128,159l71.51-71.52a12,12,0,0,1,17,17Z"/></svg>',
+  instagram: '<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M176,24H80A56.06,56.06,0,0,0,24,80v96a56.06,56.06,0,0,0,56,56h96a56.06,56.06,0,0,0,56-56V80A56.06,56.06,0,0,0,176,24ZM128,176a48,48,0,1,1,48-48A48.05,48.05,0,0,1,128,176Zm60-96a12,12,0,1,1,12-12A12,12,0,0,1,188,80Zm-28,48a32,32,0,1,1-32-32A32,32,0,0,1,160,128Z"/></svg>',
+  youtube: '<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M234.33,69.52a24,24,0,0,0-14.49-16.4C185.56,39.88,131,40,128,40s-57.56-.12-91.84,13.12a24,24,0,0,0-14.49,16.4C19.08,79.5,16,97.74,16,128s3.08,48.5,5.67,58.48a24,24,0,0,0,14.49,16.41C69,215.56,120.4,216,127.34,216h1.32c6.94,0,58.37-.44,91.18-13.11a24,24,0,0,0,14.49-16.41c2.59-10,5.67-28.22,5.67-58.48S236.92,79.5,234.33,69.52Zm-73.74,65-40,28A8,8,0,0,1,108,156V100a8,8,0,0,1,12.59-6.55l40,28a8,8,0,0,1,0,13.1Z"/></svg>',
+};
+
+// ---------- Mobile menu ----------
+function toggleMobileMenu(){
+  document.getElementById('mobile-menu').classList.toggle('hidden');
+}
+
+// ---------- Day / Night mode ----------
+function setThemeToggleState(isDark){
+  const btn = document.getElementById('theme-toggle');
+  if(!btn) return;
+  btn.setAttribute('aria-pressed', String(isDark));
+  btn.setAttribute('aria-label', isDark ? 'Switch to day mode' : 'Switch to night mode');
+}
+setThemeToggleState(document.documentElement.classList.contains('dark'));
+
+function applyTheme(isDark){
+  document.documentElement.classList.toggle('dark', isDark);
+  setThemeToggleState(isDark);
+  try { localStorage.setItem('vx-theme', isDark ? 'dark' : 'light'); } catch(e){}
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if(meta) meta.setAttribute('content', isDark ? '#0F0E13' : '#2E0F57');
+}
+
+function toggleTheme(e){
+  const goingDark = !document.documentElement.classList.contains('dark');
+  const btn = e && e.currentTarget;
+
+  // Cinematic circular reveal, expanding from the toggle switch, when the
+  // browser supports the View Transitions API. Falls back silently to the
+  // plain cross-fade (see the transition rules in <style>) otherwise.
+  if (document.startViewTransition && btn && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const rect = btn.getBoundingClientRect();
+    document.documentElement.style.setProperty('--vx-origin-x', (rect.left + rect.width/2) + 'px');
+    document.documentElement.style.setProperty('--vx-origin-y', (rect.top + rect.height/2) + 'px');
+    document.documentElement.classList.add('theme-animating');
+    const transition = document.startViewTransition(() => applyTheme(goingDark));
+    transition.finished.finally(() => document.documentElement.classList.remove('theme-animating'));
+  } else {
+    applyTheme(goingDark);
+  }
+}
+
+// ---------- Scroll reveal ----------
+const observer = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('show'); observer.unobserve(e.target);} });
+},{ threshold:0.15 });
+document.querySelectorAll('[data-fade]').forEach(el=>observer.observe(el));
+
+// ---------- Plans ----------
+// ---------- Plans (redesigned cards - matches ad creative) ----------
+async function initPlans(){
+  const plans = await VerxomeAPI.getPlans();
+  plansCache = {};
+  const grid = document.getElementById('plans-grid');
+  grid.innerHTML = '';
+  plans.forEach(p=>{
+    plansCache[p.id] = p;
+    const card = document.createElement('div');
+    card.dataset.fade = '';
+    card.dataset.plan = p.id;
+    card.className = 'fade-up plan-card flex flex-col' + (p.featured ? ' featured' : '');
+    card.innerHTML = `
+      ${p.ribbon ? `<span class="plan-ribbon">${p.ribbon}</span>` : ''}
+      <div class="plan-badge">${SITE_ICONS[p.icon] || ''}</div>
+      <h3 class="plan-name text-2xl">${p.name}</h3>
+      <div class="plan-rank-row">
+        <span class="deco-line"></span>
+        <span class="plan-stars">${'★'.repeat(p.stars)}</span>
+        <span class="deco-line"></span>
+      </div>
+      <div class="plan-credits-box">
+        ${p.discountActive ? `<span class="plan-price-original">${p.originalPrice}</span>` : ''}
+        <span class="plan-price-num">${p.price}</span>
+        <span class="plan-currency">CEDIS</span>
+        <span class="plan-term">/ ${p.label}</span>
+        ${p.discountActive ? `<span class="plan-discount-badge">${p.discountBadge}</span>` : ''}
+      </div>
+      <div class="plan-includes-row">
+        <span class="deco-line"></span>
+        <p class="plan-includes-label text-[11px]">${p.includesLabel}</p>
+        <span class="deco-line"></span>
+      </div>
+      <ul class="plan-features mt-5 flex-1 space-y-3 text-left text-sm font-medium text-[#3A2D55]">
+        ${p.features.map(f=>`<li class="flex items-start gap-2.5"><span class="plan-check-circle"><svg viewBox="0 0 10 8"><path d="M1 4l2.5 2.5L9 1" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>${f}</span></li>`).join('')}
+      </ul>
+      <button class="join-plan-btn mt-8 w-full px-6 py-3.5 text-sm">${p.buttonLabel}</button>`;
+    card.querySelector('.join-plan-btn').addEventListener('click', ()=>openJoin(p.id));
+    grid.appendChild(card);
+  });
+  grid.querySelectorAll('[data-fade]').forEach(el=>observer.observe(el));
+}
+
+// ---------- FAQ ----------
+async function initFaqs(){
+  const faqs = await VerxomeAPI.getFaqs();
+  const faqList = document.getElementById('faq-list');
+  faqList.innerHTML = '';
+  faqs.forEach(([q,a],i)=>{
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `
+      <h3>
+        <button class="flex w-full items-center justify-between gap-4 py-5 text-left" onclick="toggleFaq(${i})">
+          <span class="text-base font-semibold">${q}</span>
+          <span id="faq-icon-${i}" class="faq-caret shrink-0 text-muted transition-transform">${SITE_ICONS.caretDown}</span>
+        </button>
+      </h3>
+      <div id="faq-panel-${i}" class="accordion-panel">
+        <p class="pb-5 text-sm leading-relaxed text-muted">${a}</p>
+      </div>`;
+    faqList.appendChild(wrap);
+  });
+  toggleFaq(0);
+}
+function toggleFaq(i){
+  const panel = document.getElementById('faq-panel-'+i);
+  const icon = document.getElementById('faq-icon-'+i);
+  if(!panel) return;
+  const isOpen = panel.classList.contains('open');
+  document.querySelectorAll('.accordion-panel').forEach(p=>p.classList.remove('open'));
+  document.querySelectorAll('[id^=faq-icon-]').forEach(ic=>ic.style.transform='');
+  if(!isOpen){ panel.classList.add('open'); icon.style.transform='rotate(180deg)'; }
+}
+
+// ---------- Join modal ----------
+function openJoin(planId){
+  currentPlanId = planId;
+  renderPlanInModal();
+  document.getElementById('join-backdrop').classList.remove('hidden');
+  document.getElementById('join-backdrop').classList.add('flex');
+  document.body.style.overflow='hidden';
+}
+function closeJoin(){
+  document.getElementById('join-backdrop').classList.add('hidden');
+  document.getElementById('join-backdrop').classList.remove('flex');
+  document.body.style.overflow='';
+  resetForm();
+}
+function closeJoinIfBackdrop(e){ if(e.target.id==='join-backdrop') closeJoin(); }
+
+// Tier order for the rank-progression track in the join modal — Warrior is
+// entry rank, General is the top rank, so the track fills left-to-right
+// based on where the selected plan sits in this list.
+const TIER_ORDER = ['warrior','commander','general'];
+
+function renderPlanInModal(){
+  const p = plansCache[currentPlanId] || VerxomeAPI.getPlan(currentPlanId);
+  document.getElementById('modal-plan-icon').innerHTML = SITE_ICONS[p.icon] || '';
+  document.getElementById('modal-plan-name').textContent = p.name;
+  document.getElementById('modal-plan-price').innerHTML = p.discountActive
+    ? `<span class="plan-price-original" style="font-size:13px;">GH₵${p.originalPrice}</span> GH₵${p.price} / ${p.label} <span class="plan-discount-badge" style="font-size:9px;">${p.discountBadge}</span>`
+    : `GH₵${p.price} / ${p.label}`;
+
+  const tierIndex = TIER_ORDER.indexOf(p.id);
+  document.querySelectorAll('#rank-track .rank-seg').forEach((seg,i)=>{
+    seg.classList.toggle('filled', tierIndex>=0 && i<=tierIndex);
+  });
+  document.querySelectorAll('.rank-labels [data-tier-label]').forEach(lbl=>{
+    lbl.classList.toggle('active', lbl.dataset.tierLabel===p.id);
+  });
+
+  const switchWrap = document.getElementById('switch-plan-links');
+  switchWrap.innerHTML='';
+  Object.values(plansCache).filter(pl=>pl.id!==currentPlanId).forEach(pl=>{
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'switch-plan-pill';
+    btn.textContent = `Switch to ${pl.name}`;
+    btn.onclick = ()=>{ currentPlanId = pl.id; renderPlanInModal(); };
+    switchWrap.appendChild(btn);
+  });
+}
+
+function resetForm(){
+  ['fullName','discord','discord2','phone','email'].forEach(id=>document.getElementById('f-'+id).value='');
+  document.getElementById('f-agree').checked=false;
+  ['fullName','discord','discord2','phone','email','agree','payment'].forEach(clearErr);
+  clearErr('_global');
+  pendingFormData = null;
+  document.getElementById('join-payment-select').classList.add('hidden');
+  document.getElementById('join-form').classList.remove('hidden');
+  document.getElementById('payment-select-status').textContent = '';
+}
+
+function showErr(id, msg){
+  const el = document.getElementById('err-'+id);
+  if(!el) return;
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+function clearErr(id){
+  const el = document.getElementById('err-'+id);
+  if(!el) return;
+  el.classList.add('hidden'); el.textContent='';
+}
+
+async function handleJoinSubmit(e){
+  e.preventDefault();
+  ['fullName','discord','discord2','phone','email','agree','_global'].forEach(clearErr);
+
+  const formData = {
+    planId: currentPlanId,
+    fullName: document.getElementById('f-fullName').value,
+    discord: document.getElementById('f-discord').value,
+    discord2: document.getElementById('f-discord2').value,
+    phone: document.getElementById('f-phone').value,
+    email: document.getElementById('f-email').value,
+    agree: document.getElementById('f-agree').checked,
+  };
+
+  // Validate first — only move on to payment once the form is clean, so
+  // nobody gets charged for an application we'd reject anyway.
+  const { valid, errors } = VerxomeAPI.validateApplication(formData);
+  if(!valid){
+    Object.entries(errors).forEach(([field, msg])=>{
+      if(field === '_global'){ showErr('agree', msg); } else { showErr(field, msg); }
+    });
+    return;
+  }
+
+  pendingFormData = formData;
+  showPaymentSelect();
+}
+
+function showPaymentSelect(){
+  const plan = plansCache[pendingFormData.planId] || VerxomeAPI.getPlan(pendingFormData.planId);
+  document.getElementById('payment-select-plan-icon').innerHTML = SITE_ICONS[plan.icon] || '';
+  document.getElementById('payment-select-plan-name').textContent = plan.name;
+  document.getElementById('payment-select-plan-price').innerHTML = plan.discountActive
+    ? `<span class="plan-price-original" style="font-size:13px;">GH₵${plan.originalPrice}</span> GH₵${plan.price} / ${plan.label} <span class="plan-discount-badge" style="font-size:9px;">${plan.discountBadge}</span>`
+    : `GH₵${plan.price} / ${plan.label}`;
+  clearErr('payment');
+  document.getElementById('payment-select-status').textContent = '';
+  document.getElementById('join-form').classList.add('hidden');
+  document.getElementById('join-plan-chip').classList.add('hidden');
+  document.getElementById('join-payment-select').classList.remove('hidden');
+}
+
+function backToJoinForm(){
+  document.getElementById('join-payment-select').classList.add('hidden');
+  document.getElementById('join-plan-chip').classList.remove('hidden');
+  document.getElementById('join-form').classList.remove('hidden');
+}
+
+function selectPaymentMethod(channels){
+  if(!pendingFormData) return; // shouldn't happen, but guards against a stray click after reset
+  const tiles = document.querySelectorAll('#join-payment-select .pay-method-tile');
+  tiles.forEach(t => t.disabled = true);
+  clearErr('payment');
+  document.getElementById('payment-select-status').textContent = 'Opening secure payment…';
+
+  openPaystackCheckout(pendingFormData, channels, () => {
+    tiles.forEach(t => t.disabled = false);
+    document.getElementById('payment-select-status').textContent = '';
+  });
+}
+
+function openPaystackCheckout(formData, channels, onSettled){
+  const plan = plansCache[formData.planId] || VerxomeAPI.getPlan(formData.planId);
+  const publicKey = VerxomeAPI.CONFIG.PAYSTACK.PUBLIC_KEY;
+
+  if(!publicKey || publicKey === 'YOUR_PAYSTACK_PUBLIC_KEY'){
+    onSettled();
+    showErr('payment', 'Payments aren\'t configured yet — add a Paystack public key in verxome-api.js.');
+    return;
+  }
+
+  const paystack = new PaystackPop();
+  paystack.newTransaction({
+    key: publicKey,
+    email: formData.email.trim(),
+    amount: Math.round(plan.price * 100), // Paystack expects the smallest unit — pesewas for GHS (1 GHS = 100 pesewas)
+    currency: VerxomeAPI.CONFIG.PAYSTACK.CURRENCY,
+    channels: channels || undefined, // null/omitted = show every channel enabled on the account
+    metadata: {
+      full_name: formData.fullName.trim(),
+      discord_username: formData.discord.trim(),
+      phone: formData.phone.trim(),
+      plan: plan.name,
+    },
+    onSuccess: async (transaction) => {
+      // The popup reporting "success" only means Paystack told the
+      // browser it worked — it does NOT mean it's safe to trust yet.
+      // /api/verify-payment (a Cloudflare Pages Function) re-checks this
+      // reference directly against Paystack's servers using the secret
+      // key, and confirms the amount actually paid matches this plan's
+      // real price. Only a "verified: true" response is trusted.
+      document.getElementById('payment-select-status').textContent = 'Verifying payment…';
+      try {
+        const verifyRes = await fetch('/api/verify-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reference: transaction.reference, planId: formData.planId }),
+        });
+        const verifyData = await verifyRes.json().catch(() => ({}));
+
+        if (!verifyRes.ok || !verifyData.verified) {
+          onSettled();
+          showErr('payment', (verifyData && verifyData.error) ||
+            `We couldn't verify your payment. Please contact us with reference ${transaction.reference}.`);
+          return;
+        }
+
+        const app = VerxomeAPI.buildPaidApplication(formData, transaction.reference);
+        onSettled();
+        closeJoin();
+        document.getElementById('success-plan').textContent = plan.name;
+        document.getElementById('success-ref').textContent = app.reference;
+        document.getElementById('success-backdrop').classList.remove('hidden');
+        document.getElementById('success-backdrop').classList.add('flex');
+      } catch (err) {
+        onSettled();
+        showErr('payment', `We couldn't verify your payment. Please contact us with reference ${transaction.reference}.`);
+      }
+    },
+    onCancel: () => {
+      onSettled();
+    },
+  });
+}
+
+function closeSuccess(){
+  document.getElementById('success-backdrop').classList.add('hidden');
+  document.getElementById('success-backdrop').classList.remove('flex');
+}
+
+// ---------- Legal ----------
+const LEGAL = {
+  terms: {
+    title: 'Terms & Conditions',
+    body: `
+      <div><h3 class="font-bold text-ink">1. Membership Subscriptions</h3><p class="mt-1">Verxome Trades War Room membership is offered in three tiers — Warrior, Commander, and General — each billed for a 6 month term.</p></div>
+      <div><h3 class="font-bold text-ink">2. Payment Processing</h3><p class="mt-1">Payments are processed by Paystack. Verxome never collects or stores card numbers or mobile money PINs.</p></div>
+      <div><h3 class="font-bold text-ink">3. User Responsibility & Trading Risk</h3><p class="mt-1">Trading involves substantial risk. Members are solely responsible for their own trading decisions and account outcomes.</p></div>
+      <div><h3 class="font-bold text-ink">4. No Guarantee of Profits</h3><p class="mt-1">Verxome does not guarantee profits or any specific outcome. Content is educational and informational only.</p></div>
+      <div><h3 class="font-bold text-ink">5. Subscription Duration & Refunds</h3><p class="mt-1">All plans are billed for a 6 month term and are <strong>not refundable once purchased.</strong></p></div>`
+  },
+  privacy: {
+    title: 'Privacy Policy',
+    body: `
+      <div><h3 class="font-bold text-ink">Information we collect</h3><p class="mt-1">When you submit the join form, we collect your name, Discord username, phone number, and email address to process your membership and set up your Discord access.</p></div>
+      <div><h3 class="font-bold text-ink">How it's used</h3><p class="mt-1">Application details are used solely to verify your membership, coordinate Discord access, and contact you about your account. We do not sell or share your information with third parties.</p></div>
+      <div><h3 class="font-bold text-ink">Payment processing</h3><p class="mt-1">Payments are handled by Paystack. Verxome never receives your card number, mobile money PIN, or one time passwords.</p></div>`
+  }
+};
+function openLegal(key){
+  document.getElementById('legal-title').textContent = LEGAL[key].title;
+  document.getElementById('legal-body').innerHTML = LEGAL[key].body;
+  document.getElementById('legal-backdrop').classList.remove('hidden');
+  document.getElementById('legal-backdrop').classList.add('flex');
+}
+function closeLegal(){
+  document.getElementById('legal-backdrop').classList.add('hidden');
+  document.getElementById('legal-backdrop').classList.remove('flex');
+}
+
+// ---------- Promo ticker ----------
+// Hides itself automatically once the promo's end date has passed —
+// nothing to manually turn off. See PROMO in verxome-api.js for the date.
+function initPromoTicker(){
+  if (VerxomeAPI.isPromoActive()) return;
+  const ticker = document.getElementById('promo-ticker');
+  const header = document.querySelector('header.sticky');
+  if (ticker) ticker.style.display = 'none';
+  if (header) header.style.top = '0px';
+}
+
+// ---------- Init ----------
+document.addEventListener('DOMContentLoaded', async ()=>{
+  initPromoTicker();
+  await Promise.all([initPlans(), initFaqs()]);
+});
+</script>
+</body>
+</html>
